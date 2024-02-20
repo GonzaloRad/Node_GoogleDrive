@@ -1,5 +1,6 @@
 const { google } = require('googleapis')
 const fs = require('fs')
+const path = require('path')
 
 // Carga el archivo JSON de credenciales descargado desde Google Cloud Console
 const apikey = require('./apikeys.json')
@@ -13,23 +14,22 @@ const auth = new google.auth.GoogleAuth({
 // Crea un cliente de la API de Google Drive
 const drive = google.drive({ version: 'v3', auth })
 
-
 // ============================ Listar archivos ============================
 /**
- * 
+ * Function to list contents of the folder
  * @param {*} folderId ID of drive folder
  */
 async function listFilesInFolder(folderId) {
     try {
         const response = await drive.files.list({
             q: `'${folderId}' in parents`,
-            fields: 'files(id, name)',
+            fields: 'files(id, name, mimeType)',
         })
 
         const files = response.data.files
         console.log('Archivos en la carpeta:')
         files.forEach(file => {
-            console.log(`${file.name} (${file.id})`)
+            console.log(`(${file.id}) ${file.name} (${file.mimeType})`)
         })
     } catch (error) {
         console.error('Error al listar archivos:', error)
@@ -70,7 +70,7 @@ async function uploadFiles(folderId,fileName, filePath, mimeType) {
 
 // ============================ Borrar archivo ============================
 /**
- * 
+ * Delete file
  * @param {*} idFile ID of file in drive
  */
 async function deleteFile(idFile) {
@@ -86,7 +86,7 @@ async function deleteFile(idFile) {
 
 // ============================ Verificar archivo duplicado ============================
 /**
- * 
+ * Verifies if file exists
  * @param {*} fileName name of file
  * @param {*} folderId ID of drive folder
  * @returns 
@@ -113,7 +113,7 @@ async function verifyExistence(fileName,folderId) {
 
 // ============================ Subir archivo sobreescribir ============================
 /**
- * 
+ * if a file exists in the destination folder te file is deleted and a new file is uploaded
  * @param {*} folderId ID of drive folder
  * @param {*} fileName name of file
  * @param {*} filePath file of path to upload
@@ -130,10 +130,69 @@ async function uploadAndReplace(folderId,fileName, filePath, mimeType) {
         uploadFiles(folderId,fileName, filePath, mimeType)
 }
 
+// ============================ Bajar archivos ============================
+/**
+ * Download a file and save it with name = fileName
+ * @param {*} fileId Id of file to download
+ * @param {*} fileName name to save the file as
+ */
+function downloadFile(fileId, fileName) {
+    const destFilePath = path.join(__dirname, 'downloads', fileName)
+  
+    const download = async () => {
+      try {
+        const response = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'stream' })
+        const dest = fs.createWriteStream(destFilePath)
+        response.data
+          .on('end', () => console.log('Archivo descargado correctamente.'))
+          .on('error', err => console.error('Error al descargar el archivo:', err))
+          .pipe(dest)
+      } catch (error) {
+        console.error('Error al descargar el archivo:', error)
+      }
+    }
+  
+    download()
+  }
+// ============================ Storage check ============================
+/**
+ * Get current and max storage
+ */
+  async function getDriveStorage() {
+    try {
+      const about = await drive.about.get({
+        fields: 'storageQuota',
+      })
+  
+      const storageQuota = about.data.storageQuota
+      console.log('Espacio total:', formatBytes(storageQuota.limit))
+      console.log('Espacio utilizado:', formatBytes(storageQuota.usage))
+      console.log('Espacio disponible:', formatBytes(storageQuota.limit - storageQuota.usage))
+    } catch (error) {
+      console.error('Error al obtener información de almacenamiento:', error)
+    }
+  }
+  /**
+   * Converts bytes up to Tera bytes
+   * @param {*} bytes 
+   * @returns 
+   */
+  function formatBytes(bytes) {
+    const units = ['B', 'KB', 'MB', 'GB', 'TB']
+    let index = 0
+    while (bytes >= 1024 && index < units.length - 1) {
+      bytes /= 1024
+      index++
+    }
+    return `${bytes.toFixed(2)} ${units[index]}`
+  }
+  
 module.exports = {
     listFilesInFolder,
     uploadFiles,
     deleteFile,
     verifyExistence,
-    uploadAndReplace
+    uploadAndReplace,
+    downloadFile,
+    getDriveStorage
 }
