@@ -1,4 +1,6 @@
-const { google } = require('googleapis')
+const {
+    google
+} = require('googleapis')
 const fs = require('fs')
 const path = require('path')
 
@@ -12,7 +14,10 @@ const auth = new google.auth.GoogleAuth({
 })
 
 // Crea un cliente de la API de Google Drive
-const drive = google.drive({ version: 'v3', auth })
+const drive = google.drive({
+    version: 'v3',
+    auth
+})
 
 // ============================ Listar archivos ============================
 /**
@@ -43,12 +48,12 @@ async function listFilesInFolder(folderId) {
  * @param {*} filePath file of path to upload
  * @param {*} mimeType type of file
  */
-async function uploadFiles(folderId,fileName, filePath, mimeType) {
+async function uploadFiles(folderId, fileName, filePath, mimeType) {
     try {
         const archivoMetadata = {
             name: fileName,
             mimeType: mimeType,
-            parents:[folderId]
+            parents: [folderId]
         }
 
         const media = {
@@ -91,7 +96,7 @@ async function deleteFile(idFile) {
  * @param {*} folderId ID of drive folder
  * @returns 
  */
-async function verifyExistence(fileName,folderId) {
+async function verifyExistence(fileName, folderId) {
     try {
         const response = await drive.files.list({
             q: `'${folderId}' in parents`,
@@ -101,7 +106,7 @@ async function verifyExistence(fileName,folderId) {
         const files = response.data.files
         //console.log(archivos)
         const existe = files.some(el => el.name === fileName)
-        if(existe)
+        if (existe)
             return files.find(el => el.name === fileName).id
         else
             return ""
@@ -119,15 +124,13 @@ async function verifyExistence(fileName,folderId) {
  * @param {*} filePath file of path to upload
  * @param {*} mimeType type of file
  */
-async function uploadAndReplace(folderId,fileName, filePath, mimeType) {
-    let archivoID = await verifyExistence(fileName,folderId)
-    if(archivoID != '')
-    {
+async function uploadAndReplace(folderId, fileName, filePath, mimeType) {
+    let archivoID = await verifyExistence(fileName, folderId)
+    if (archivoID != '') {
         await deleteFile(archivoID)
-        uploadFiles(folderId,fileName, filePath, mimeType)
-    }
-    else
-        uploadFiles(folderId,fileName, filePath, mimeType)
+        uploadFiles(folderId, fileName, filePath, mimeType)
+    } else
+        uploadFiles(folderId, fileName, filePath, mimeType)
 }
 
 // ============================ Bajar archivos ============================
@@ -136,57 +139,63 @@ async function uploadAndReplace(folderId,fileName, filePath, mimeType) {
  * @param {*} fileId Id of file to download
  * @param {*} fileName name to save the file as
  */
-function downloadFile(fileId, fileName) {
-    const destFilePath = path.join(__dirname, 'downloads', fileName)
-  
+function downloadFile(fileId, fileName, i) {
+    //const destFilePath = path.join(__dirname, 'downloads', fileName)
+    const destFilePath = path.join(__dirname, i + '', fileName)
+
     const download = async () => {
-      try {
-        const response = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'stream' })
-        const dest = fs.createWriteStream(destFilePath)
-        response.data
-          .on('end', () => console.log('Archivo descargado correctamente.'))
-          .on('error', err => console.error('Error al descargar el archivo:', err))
-          .pipe(dest)
-      } catch (error) {
-        console.error('Error al descargar el archivo:', error)
-      }
+        try {
+            const response = await drive.files.get({
+                fileId,
+                alt: 'media'
+            }, {
+                responseType: 'stream'
+            })
+            const dest = fs.createWriteStream(destFilePath)
+            response.data
+                .on('end', () => console.log('Archivo descargado correctamente.'))
+                .on('error', err => console.error('Error al descargar el archivo ' + fileName+ ' a la carpeta ' + destFilePath + ':', err))
+                .pipe(dest)
+        } catch (error) {
+            console.error('Error al descargar el archivo:', error)
+        }
     }
-  
+
     download()
-  }
+}
 // ============================ Storage check ============================
 /**
  * Get current and max storage
  */
-  async function getDriveStorage() {
+async function getDriveStorage() {
     try {
-      const about = await drive.about.get({
-        fields: 'storageQuota',
-      })
-  
-      const storageQuota = about.data.storageQuota
-      console.log('Espacio total:', formatBytes(storageQuota.limit))
-      console.log('Espacio utilizado:', formatBytes(storageQuota.usage))
-      console.log('Espacio disponible:', formatBytes(storageQuota.limit - storageQuota.usage))
+        const about = await drive.about.get({
+            fields: 'storageQuota',
+        })
+
+        const storageQuota = about.data.storageQuota
+        console.log('Espacio total:', formatBytes(storageQuota.limit))
+        console.log('Espacio utilizado:', formatBytes(storageQuota.usage))
+        console.log('Espacio disponible:', formatBytes(storageQuota.limit - storageQuota.usage))
     } catch (error) {
-      console.error('Error al obtener información de almacenamiento:', error)
+        console.error('Error al obtener información de almacenamiento:', error)
     }
-  }
-  /**
-   * Converts bytes up to Tera bytes
-   * @param {*} bytes 
-   * @returns 
-   */
-  function formatBytes(bytes) {
+}
+/**
+ * Converts bytes up to Tera bytes
+ * @param {*} bytes 
+ * @returns 
+ */
+function formatBytes(bytes) {
     const units = ['B', 'KB', 'MB', 'GB', 'TB']
     let index = 0
     while (bytes >= 1024 && index < units.length - 1) {
-      bytes /= 1024
-      index++
+        bytes /= 1024
+        index++
     }
     return `${bytes.toFixed(2)} ${units[index]}`
-  }
-  
+}
+
 module.exports = {
     listFilesInFolder,
     uploadFiles,
