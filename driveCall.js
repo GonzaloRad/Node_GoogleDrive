@@ -203,5 +203,6 @@ module.exports = {
     verifyExistence,
     uploadAndReplace,
     downloadFile,
-    getDriveStorage
+    getDriveStorage,
+    formatBytes
 }
