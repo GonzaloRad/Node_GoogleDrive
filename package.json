@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "diskusage": "^1.2.0",
     "dotenv": "^16.4.4",
     "fs": "^0.0.1-security",
     "googleapis": "^133.0.0",

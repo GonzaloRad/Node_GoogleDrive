@@ -3,6 +3,7 @@ const {
 } = require('googleapis')
 const fs = require('fs')
 const path = require('path')
+const disk = require('diskusage')
 
 // Carga el archivo JSON de credenciales descargado desde Google Cloud Console
 const apikey = require('./apikeys.json')
@@ -181,6 +182,7 @@ async function getDriveStorage() {
         console.error('Error al obtener información de almacenamiento:', error)
     }
 }
+// ============================ Convert bytes ============================
 /**
  * Converts bytes up to Tera bytes
  * @param {*} bytes 
@@ -195,6 +197,28 @@ function formatBytes(bytes) {
     }
     return `${bytes.toFixed(2)} ${units[index]}`
 }
+// ============================ Storage check server vs file ============================
+/**
+ * Checks if there is enough available space for the file
+ * @param {*} fileSize the size of the file to check
+ */
+function checkFreeSpace(fileSize){
+    disk.check('.', (err, info) => {
+        if (err) {
+          console.error('Error al obtener información del sistema de archivos:', err)
+          return 'ERROR READING INFO'
+        }
+      
+        const freeSpace = info.available
+        if(filesize >= freeSpace)
+            return false
+        else{
+            return true
+        }
+        
+      })
+}
+
 
 module.exports = {
     listFilesInFolder,
@@ -204,5 +228,6 @@ module.exports = {
     uploadAndReplace,
     downloadFile,
     getDriveStorage,
-    formatBytes
+    formatBytes,
+    checkFreeSpace
 }
